@@ -26,12 +26,18 @@ set( HCORE_MISC_SRC
 include_directories( ${CMAKE_CURRENT_SOURCE_DIR}/include )
 include_directories( ${CMAKE_CURRENT_SOURCE_DIR}/misc/include )
 add_library( hcore ${HCORE_CONTROL_SRC} ${HCORE_COMPUTE_SRC} ${HCORE_MISC_SRC})
-set_target_properties( hcore PROPERTIES LINKER_LANGUAGE C )
+set_target_properties( hcore PROPERTIES 
+    LINKER_LANGUAGE C
+    POSITION_INDEPENDENT_CODE ON
+)
 
 
 # Installation step
 install( TARGETS hcore
          DESTINATION lib )
+
+# Add hcore target to export set for HICMA PARSEC
+install( TARGETS hcore EXPORT HICMAParsecTargets )
 Install( FILES include/hcore_z.h include/hcore_d.h include/hcore_s.h include/hcore.h include/hcore_init.h 
          misc/include/flop_counts.h
          misc/include/flop_util.h

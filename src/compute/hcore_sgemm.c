@@ -327,13 +327,13 @@ void __ssvd(
     }
     float zero = 0.0;
     char chlow = 'L';
-    slaset_(&chlow,
-            &rA_nrows, &rA_ncols, &zero, &zero, _rA, &ld_rA);
+    LAPACKE_slaset(LAPACK_COL_MAJOR, chlow,
+            rA_nrows, rA_ncols, zero, zero, _rA, ld_rA);
     char chup = 'U';
-    slacpy_(&chup,
-            &rA_nrows, &rA_ncols,
-            _CU, &ld_CU,
-            _rA, &ld_rA);
+    LAPACKE_slacpy(LAPACK_COL_MAJOR, chup,
+            rA_nrows, rA_ncols,
+            _CU, ld_CU,
+            _rA, ld_rA);
     if(sgemm_print_mat){
         printf("%d\t|_CU and _rA\n", __LINE__);
         shc_printmat(_CU,  _M, _Crk, ld_CU);
@@ -355,10 +355,10 @@ void __ssvd(
     }
     if(sgemm_use_trmm == 0){
         assert(_rB != NULL);
-        slaset_(&chlow,
-                &rB_nrows, &rB_ncols, &zero, &zero, _rB, &ld_rB);
-        slacpy_(&chup,
-                &rB_nrows, &rB_ncols, _CV, &ld_CV, _rB, &ld_rB);
+        LAPACKE_slaset(LAPACK_COL_MAJOR, chlow,
+                rB_nrows, rB_ncols, zero, zero, _rB, ld_rB);
+        LAPACKE_slacpy(LAPACK_COL_MAJOR, chup,
+                rB_nrows, rB_ncols, _CV, ld_CV, _rB, ld_rB);
     } else {
         _rB = _CV;
         ld_rB = ld_CV;
@@ -528,7 +528,7 @@ void __snewu(
     //        zero, zero, &_U[U_nrows], ld_U);
 
     char uplo = 'A';
-    slaset_( &uplo, &nrows, &U_ncols, &zero, &zero, &_U[U_nrows], &ld_U );
+    LAPACKE_slaset(LAPACK_COL_MAJOR, uplo, nrows, U_ncols, zero, zero, &_U[U_nrows], ld_U);
     if(info != 0){
         fprintf(stderr,
                 "%s %d ERROR in LAPACKE_dlaset() info=%d\n",
@@ -642,7 +642,7 @@ void __snewv(
     //        zero, zero, &(_V[V_ncols*ld_V]), ld_V);
     char uplo = 'A';
     size_t iv = V_ncols*ld_V;
-    slaset_( &uplo, &V_nrows, &ncols, &zero, &zero, &(_V[iv]), &ld_V );
+    LAPACKE_slaset(LAPACK_COL_MAJOR, uplo, V_nrows, ncols, zero, zero, &(_V[iv]), ld_V);
     if(sgemm_print_mat){
         shc_printmat(_V,  _M, _M, ld_V);
     }
@@ -671,7 +671,7 @@ void __snewv(
               __LINE__, V_nrows,  V_ncols, ld_V, ld_CV);
     }
     LAPACKE_sge_trans(LAPACK_COL_MAJOR, V_nrows, V_ncols,
-            _V, ld_V, _CV, ld_CV);
+             _V, ld_V, _CV, ld_CV);
     if(sgemm_print_index){
         printf(" NEWV\t|%d\t|    copy     V_nrows:%d V_ncols:%d ld_CV:%d ld_V:%d\n",
               __LINE__, V_nrows, V_ncols, ld_CV, ld_V);
@@ -769,10 +769,10 @@ void HCORE_sgemm(HCORE_enum transA, HCORE_enum transB,
         } else {
             CUclone = malloc(CUclone_nelm * sizeof(float));
         }
-        slacpy_(&chall,
-                &_M, &_Crk,
-                _CU, &ld_CU,
-                CUclone, &ld_CUclone);
+        LAPACKE_slacpy(LAPACK_COL_MAJOR, chall,
+                _M, _Crk,
+                _CU, ld_CU,
+                CUclone, ld_CUclone);
     }
 
     float* CVclone = NULL;
@@ -785,10 +785,10 @@ void HCORE_sgemm(HCORE_enum transA, HCORE_enum transB,
         } else {
             CVclone = malloc(CVclone_nelm * sizeof(float));
         }
-        slacpy_(&chall,
-                &_M, &_Crk,
-                _CV, &ld_CV,
-                CVclone, &ld_CVclone);
+        LAPACKE_slacpy(LAPACK_COL_MAJOR, chall,
+                _M, _Crk,
+                _CV, ld_CV,
+                CVclone, ld_CVclone);
     }
     float* _CU_save = _CU;
     float* _CV_save = _CV;
@@ -969,16 +969,16 @@ void HCORE_sgemm(HCORE_enum transA, HCORE_enum transB,
     //printf("%d->%d\n", _Crk, *pnew_Crk);
 
     if(use_CUV_clone == 1) {
-        slacpy_(&chall,
-                &_M, &new_UVrk,
-                CUclone, &ld_CUclone,
-                _CU_save, &ld_CU
+        LAPACKE_slacpy(LAPACK_COL_MAJOR, chall,
+                _M, new_UVrk,
+                CUclone, ld_CUclone,
+                _CU_save, ld_CU
                 );
 
-        slacpy_(&chall,
-                &_M, &new_UVrk,
-                CVclone, &ld_CVclone,
-                _CV_save, &ld_CV
+        LAPACKE_slacpy(LAPACK_COL_MAJOR, chall,
+                _M, new_UVrk,
+                CVclone, ld_CVclone,
+                _CV_save, ld_CV
                 );
         if(use_scratch == 0) {
             free(CUclone);
@@ -1105,10 +1105,10 @@ void HCORE_sgemm_qr_svd_b_dense(int transA, int transB,
         } else {
             CUclone = malloc(CUclone_nelm * sizeof(float));
         }
-        slacpy_(&chall,
-                &_M, &_Crk,
-                _CU, &ld_CU,
-                CUclone, &ld_CUclone);
+        LAPACKE_slacpy(LAPACK_COL_MAJOR, chall,
+                _M, _Crk,
+                _CU, ld_CU,
+                CUclone, ld_CUclone);
     }
 
     float* CVclone = NULL;
@@ -1121,10 +1121,10 @@ void HCORE_sgemm_qr_svd_b_dense(int transA, int transB,
         } else {
             CVclone = malloc(CVclone_nelm * sizeof(float));
         }
-        slacpy_(&chall,
-                &_M, &_Crk,
-                _CV, &ld_CV,
-                CVclone, &ld_CVclone);
+        LAPACKE_slacpy(LAPACK_COL_MAJOR, chall,
+                _M, _Crk,
+                _CV, ld_CV,
+                CVclone, ld_CVclone);
     }
     float* _CU_save = _CU;
     float* _CV_save = _CV;
@@ -1399,10 +1399,10 @@ void HCORE_sgemm_qr_svd(int transA, int transB,
         } else {
             CUclone = malloc(CUclone_nelm * sizeof(float));
         }
-        slacpy_(&chall,
-                &_M, &_Crk,
-                _CU, &ld_CU,
-                CUclone, &ld_CUclone);
+        LAPACKE_slacpy(LAPACK_COL_MAJOR, chall,
+                _M, _Crk,
+                _CU, ld_CU,
+                CUclone, ld_CUclone);
     }
 
     float* CVclone = NULL;
@@ -1415,10 +1415,10 @@ void HCORE_sgemm_qr_svd(int transA, int transB,
         } else {
             CVclone = malloc(CVclone_nelm * sizeof(float));
         }
-        slacpy_(&chall,
-                &_M, &_Crk,
-                _CV, &ld_CV,
-                CVclone, &ld_CVclone);
+        LAPACKE_slacpy(LAPACK_COL_MAJOR, chall,
+                _M, _Crk,
+                _CV, ld_CV,
+                CVclone, ld_CVclone);
     }
     float* _CU_save = _CU;
     float* _CV_save = _CV;
@@ -1663,16 +1663,16 @@ void HCORE_sgemm_ormqr(int transA, int transB,
             qrtauB, flops
             );
     if(use_CUV_clone == 1) {
-        slacpy_(&chall,
-                &_M, &new_UVrk,
-                CUclone, &ld_CUclone,
-                _CU_save, &ld_CU
+        LAPACKE_slacpy(LAPACK_COL_MAJOR, chall,
+                _M, new_UVrk,
+                CUclone, ld_CUclone,
+                _CU_save, ld_CU
                 );
 
-        slacpy_(&chall,
-                &_M, &new_UVrk,
-                CVclone, &ld_CVclone,
-                _CV_save, &ld_CV
+        LAPACKE_slacpy(LAPACK_COL_MAJOR, chall,
+                _M, new_UVrk,
+                CVclone, ld_CVclone,
+                _CV_save, ld_CV
                 );
         if(use_scratch == 0) {
             free(CUclone);

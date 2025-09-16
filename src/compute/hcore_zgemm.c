@@ -113,7 +113,7 @@ void __zqra(int _M,
         printf("CU|AU:");zhc_printmat(_CU,  _M, CU_ncols, ld_CU);
     }
     info = LAPACKE_zgeqrf(
-                          LAPACK_COL_MAJOR, CU_nrows, CU_ncols, _CU, ld_CU, qrtauA);
+                          LAPACK_COL_MAJOR, CU_nrows, CU_ncols, TO_LAPACK_COMPLEX_PTR(_CU), ld_CU, TO_LAPACK_COMPLEX_PTR(qrtauA));
     unsigned long int qrflop = flop_counts('q', CU_nrows, CU_ncols, 0, 0);
     flops->update += qrflop;// + multMinusOne;
     //printf("%d %d %d _M:%d\n", CU_nrows, CU_ncols, ld_CU, _M);
@@ -207,7 +207,7 @@ void __zqrb(
     }
     /* Step 4: QR(CV)    potrf */
     info = LAPACKE_zgeqrf(LAPACK_COL_MAJOR, CV_nrows, CV_ncols,
-                          _CV, ld_CV, qrtauB);
+                          TO_LAPACK_COMPLEX_PTR(_CV), ld_CV, TO_LAPACK_COMPLEX_PTR(qrtauB));
     if(info != 0){
         fprintf(stderr,
                 "%s %d ERROR in LAPACKE_dgeqrf(1:CV_nrows:%d 2:CV_ncols:%d 3:_CV:%p 4:ld_CV:%d 5:qrtauB:%p) info=%d maxrank:%d\n",
@@ -251,15 +251,14 @@ void __zsvd(
         printf(" SVD\t|%d\t| copy rA rA_nrows:%d rA_ncols:%d ld_CU:%d ld_rA:%d CU:%p rA:%p\n",
                __LINE__, rA_nrows, rA_ncols, ld_CU, ld_rA, _CU, _rA);
     }
-    double _Complex zero = (double _Complex)0.0;
     char chlow = 'L';
-    zlaset_(&chlow,
-                  &rA_nrows, &rA_ncols, &zero, &zero, _rA, &ld_rA);
+    LAPACKE_zlaset(LAPACK_COL_MAJOR, chlow,
+                  rA_nrows, rA_ncols, LAPACK_ZERO, LAPACK_ZERO, TO_LAPACK_COMPLEX_PTR(_rA), ld_rA);
     char chup = 'U';
-    zlacpy_(&chup,
-                  &rA_nrows, &rA_ncols,
-                  _CU, &ld_CU,
-                  _rA, &ld_rA);
+    LAPACKE_zlacpy(LAPACK_COL_MAJOR, chup,
+                  rA_nrows, rA_ncols,
+                  TO_LAPACK_COMPLEX_PTR(_CU), ld_CU,
+                  TO_LAPACK_COMPLEX_PTR(_rA), ld_rA);
     if(gemm_print_mat){
         printf("%d\t|_CU and _rA\n", __LINE__);
         zhc_printmat(_CU,  _M, _Crk, ld_CU);
@@ -281,10 +280,10 @@ void __zsvd(
     }
     if(use_trmm == 0){
         assert(_rB != NULL);
-        zlaset_(&chlow,
-                      &rB_nrows, &rB_ncols, &zero, &zero, _rB, &ld_rB);
-        zlacpy_(&chup,
-                      &rB_nrows, &rB_ncols, _CV, &ld_CV, _rB, &ld_rB);
+        LAPACKE_zlaset(LAPACK_COL_MAJOR, chlow,
+                      rB_nrows, rB_ncols, LAPACK_ZERO, LAPACK_ZERO, TO_LAPACK_COMPLEX_PTR(_rB), ld_rB);
+        LAPACKE_zlacpy(LAPACK_COL_MAJOR, chup,
+                      rB_nrows, rB_ncols, TO_LAPACK_COMPLEX_PTR(_CV), ld_CV, TO_LAPACK_COMPLEX_PTR(_rB), ld_rB);
     } else {
         _rB = _CV;
         ld_rB = ld_CV;
@@ -325,8 +324,8 @@ void __zsvd(
         printf(" SVD\t|%d\t| svd(T)    (3.m)T_nrows:%d (4.n)T_ncols:%d ld_T:%d ld_U:%d (11.ldvt)ld_V:%d _T:%p (zero based parameter indices)\n", __LINE__, T_nrows, T_ncols,  ld_T, ld_U, ld_V, _T);
     }
     info = LAPACKE_zgesvd(LAPACK_COL_MAJOR, 'A', 'A',
-                          T_nrows, T_ncols, _T, ld_T, sigma,
-                          _U, ld_U, _V, ld_V,
+                          T_nrows, T_ncols, TO_LAPACK_COMPLEX_PTR(_T), ld_T, sigma,
+                          TO_LAPACK_COMPLEX_PTR(_U), ld_U, TO_LAPACK_COMPLEX_PTR(_V), ld_V,
                           svdsuperb);
     if(info != 0){
         /**
@@ -458,7 +457,7 @@ void __znewu(
         printf("_U(before zero):");zhc_printmat(_U,  _M, _M, ld_U);
     }
     char uplo = 'A';
-    zlaset_( &uplo, &nrows, &U_ncols, &zero, &zero, &_U[U_nrows], &ld_U );
+    LAPACKE_zlaset(LAPACK_COL_MAJOR, uplo, nrows, U_ncols, LAPACK_ZERO, LAPACK_ZERO, TO_LAPACK_COMPLEX_PTR(&_U[U_nrows]), ld_U);
     if(info != 0){
         fprintf(stderr,
                 "%s %d ERROR in LAPACKE_dlaset() info=%d\n",
@@ -481,7 +480,7 @@ void __znewu(
     //zunmqr
     int min_MK = hcore_min(CU_nrows, ncols_qA); //number of reflectors, number of rows of qA
     info = LAPACKE_zunmqr(LAPACK_COL_MAJOR, 'L', 'N',
-            CU_nrows, U_ncols, min_MK, _CU, ld_CU, qrtauA, _U, ld_U);
+            CU_nrows, U_ncols, min_MK, TO_LAPACK_COMPLEX_PTR(_CU), ld_CU, TO_LAPACK_COMPLEX_PTR(qrtauA), TO_LAPACK_COMPLEX_PTR(_U), ld_U);
     if(gemm_print_index){
         printf(" NEWU\t|%d\t|    ormqr     CU_nrows (new U_nrows):%d U_ncols:%d min_MK:%d ld_CU:%d ld_U:%d\n",
               __LINE__, CU_nrows, U_ncols, min_MK, ld_CU, ld_U);
@@ -536,7 +535,7 @@ void __znewu(
     flops->update += flop_counts('o', CU_nrows, U_ncols, min_MK, 1);  
     U_nrows = CU_nrows;
     LAPACKE_zlacpy(LAPACK_COL_MAJOR, 'A', U_nrows, U_ncols,
-            _U, ld_U, _CU, ld_CU);
+            TO_LAPACK_COMPLEX_PTR(_U), ld_U, TO_LAPACK_COMPLEX_PTR(_CU), ld_CU);
     if(gemm_print_index){
         printf(" NEWU\t|%d\t|    copy     U_nrows:%d U_ncols:%d ld_CU:%d ld_U:%d\n",
                 __LINE__, U_nrows, U_ncols, ld_CU, ld_U);
@@ -581,7 +580,7 @@ void __znewv(
     //        zero, zero, &(_V[V_ncols*ld_V]), ld_V);
     char uplo = 'A';
     size_t iv = V_ncols*ld_V;
-    zlaset_( &uplo, &V_nrows, &ncols, &zero, &zero, &(_V[iv]), &ld_V );
+    LAPACKE_zlaset(LAPACK_COL_MAJOR, uplo, V_nrows, ncols, LAPACK_ZERO, LAPACK_ZERO, TO_LAPACK_COMPLEX_PTR(&(_V[iv])), ld_V);
     if(gemm_print_mat){
         zhc_printmat(_V,  _M, _M, ld_V);
     }
@@ -602,7 +601,7 @@ void __znewv(
     //zunmqr
     int min_MK = hcore_min(_M, ncols_qB); //number of reflectors, number of rows of qB
     info = LAPACKE_zunmqr(LAPACK_COL_MAJOR, 'R', 'C', /**T in double*/
-                          V_nrows, CV_nrows, min_MK, _CV, ld_CV, qrtauB, _V, ld_V);
+                          V_nrows, CV_nrows, min_MK, TO_LAPACK_COMPLEX_PTR(_CV), ld_CV, TO_LAPACK_COMPLEX_PTR(qrtauB), TO_LAPACK_COMPLEX_PTR(_V), ld_V);
     if(gemm_print_mat){
         zhc_printmat(_V,  _M, _M, ld_V);
     }
@@ -620,7 +619,7 @@ void __znewv(
                __LINE__, V_nrows,  V_ncols, ld_V, ld_CV);
     }
     LAPACKE_zge_trans(LAPACK_COL_MAJOR, V_nrows, V_ncols,
-            _V, ld_V, _CV, ld_CV);
+             _V, ld_V, _CV, ld_CV);
     if(1){
         int i, nelm = ld_CV*CV_ncols;
         for(i=0;i<nelm;i++){
@@ -731,10 +730,10 @@ void HCORE_zgemm(HCORE_enum transA, int transB,
             } else {
                 CUclone = malloc(CUclone_nelm * sizeof(double _Complex));
             }
-            zlacpy_(&chall,
-                          &_M, &_Crk,
-                          _CU, &ld_CU,
-                          CUclone, &ld_CUclone);
+            LAPACKE_zlacpy(LAPACK_COL_MAJOR, chall,
+                          _M, _Crk,
+                          TO_LAPACK_COMPLEX_PTR(_CU), ld_CU,
+                          TO_LAPACK_COMPLEX_PTR(CUclone), ld_CUclone);
         }
         
         double _Complex* CVclone = NULL;
@@ -747,10 +746,10 @@ void HCORE_zgemm(HCORE_enum transA, int transB,
             } else {
                 CVclone = malloc(CVclone_nelm * sizeof(double _Complex));
             }
-            zlacpy_(&chall,
-                          &_M, &_Crk,
-                          _CV, &ld_CV,
-                          CVclone, &ld_CVclone);
+            LAPACKE_zlacpy(LAPACK_COL_MAJOR, chall,
+                          _M, _Crk,
+                          TO_LAPACK_COMPLEX_PTR(_CV), ld_CV,
+                          TO_LAPACK_COMPLEX_PTR(CVclone), ld_CVclone);
         }
         double _Complex* _CU_save = _CU;
         double _Complex* _CV_save = _CV;
@@ -874,8 +873,8 @@ void HCORE_zgemm(HCORE_enum transA, int transB,
         size_t svd_sigma_nelm  = svd_T_nrows;
         size_t svd_superb_nelm = svd_T_nrows;
         if(use_scratch == 1){
-            svd_sigma  = work + qrtauA_nelm + qrtauB_nelm + qrb_aubut_nelm + newU_nelm + newV_nelm + svd_rA_nelm + svd_rB_nelm + svd_T_nelm;
-            svd_superb = work + qrtauA_nelm + qrtauB_nelm + qrb_aubut_nelm + newU_nelm + newV_nelm + svd_rA_nelm + svd_rB_nelm + svd_T_nelm + svd_sigma_nelm;
+            svd_sigma  = (double*)(work + qrtauA_nelm + qrtauB_nelm + qrb_aubut_nelm + newU_nelm + newV_nelm + svd_rA_nelm + svd_rB_nelm + svd_T_nelm);
+            svd_superb = (double*)(work + qrtauA_nelm + qrtauB_nelm + qrb_aubut_nelm + newU_nelm + newV_nelm + svd_rA_nelm + svd_rB_nelm + svd_T_nelm + svd_sigma_nelm);
         } else {
             //printf("\n svd_sigma_nelm:%d, svd_superb_nelm:%d\n", svd_sigma_nelm, svd_superb_nelm);	
             svd_sigma  = malloc(svd_sigma_nelm  * sizeof(double));
@@ -931,16 +930,16 @@ void HCORE_zgemm(HCORE_enum transA, int transB,
         //printf("%s %d: %d->%d\n", __FILE__, __LINE__,  _Crk, *pnew_Crk);
         
         if(use_CUV_clone == 1) {
-            zlacpy_(&chall,
-                          &_M, &new_UVrk,
-                          CUclone, &ld_CUclone,
-                          _CU_save, &ld_CU
+            LAPACKE_zlacpy(LAPACK_COL_MAJOR, chall,
+                          _M, new_UVrk,
+                          TO_LAPACK_COMPLEX_PTR(CUclone), ld_CUclone,
+                          TO_LAPACK_COMPLEX_PTR(_CU_save), ld_CU
                           );
             
-            zlacpy_(&chall,
-                          &_M, &new_UVrk,
-                          CVclone, &ld_CVclone,
-                          _CV_save, &ld_CV
+            LAPACKE_zlacpy(LAPACK_COL_MAJOR, chall,
+                          _M, new_UVrk,
+                          TO_LAPACK_COMPLEX_PTR(CVclone), ld_CVclone,
+                          TO_LAPACK_COMPLEX_PTR(_CV_save), ld_CV
                           );
             
             if(use_scratch == 0) {
@@ -986,8 +985,8 @@ void HCORE_zgemm_dense(HCORE_enum transA, int transB,
                        double _Complex *C,
                        int LDC) {
 
-    cblas_sgemm(CblasColMajor, (CBLAS_TRANSPOSE )transA, (CBLAS_TRANSPOSE)transB, M, N, K,
-                alpha,A, LDA, B, LDB, beta, C, LDC);
+    cblas_zgemm(CblasColMajor, (CBLAS_TRANSPOSE )transA, (CBLAS_TRANSPOSE)transB, M, N, K,
+                &alpha, A, LDA, B, LDB, &beta, C, LDC);
 
 }
 

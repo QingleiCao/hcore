@@ -34,8 +34,8 @@ void HCORE_dnormest( int M, int N, double *A, double *e, double *work)
      *
      *   x_j = sum( A_ij )
      */
-    dlange_("I", &M, &N, A, &M, X);
-    //LAPACKE_dlange(LAPACK_COL_MAJOR, 'I', M, N, A, M);
+    // dlange_("I", &M, &N, A, &M, X);
+    LAPACKE_dlange(LAPACK_COL_MAJOR, 'I', M, N, A, M);
 
     /**
      * WARNING: We directly pass the pointer to the full storage of X, since

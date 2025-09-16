@@ -127,14 +127,14 @@ void HCORE_dgemm_fast(HCORE_enum transA, int transB,
         CVclone = d_work;
         d_work += CVclone_nelm;
         ws_needed += CVclone_nelm;
-        dlacpy_(&chall,
-                &_M, &_Crk,
-                _CU, &ld_CU,
-                CUclone, &ld_CUclone);
-        dlacpy_(&chall,
-                &_M, &_Crk,
-                _CV, &ld_CV,
-                CVclone, &ld_CVclone);
+        LAPACKE_dlacpy(LAPACK_COL_MAJOR, chall,
+                _M, _Crk,
+                _CU, ld_CU,
+                CUclone, ld_CUclone);
+        LAPACKE_dlacpy(LAPACK_COL_MAJOR, chall,
+                _M, _Crk,
+                _CV, ld_CV,
+                CVclone, ld_CVclone);
         _CU = CUclone;
         _CV = CVclone;
         ld_CU = ld_CUclone;
@@ -216,11 +216,11 @@ void HCORE_dgemm_fast(HCORE_enum transA, int transB,
 
         //copy rA from CU
         char chlow = 'L';
-        dlaset_(&chlow, &CUV_ncols, &CUV_ncols, &d_zero, &d_zero, rA, &ld_rA);
+        LAPACKE_dlaset(LAPACK_COL_MAJOR, chlow, CUV_ncols, CUV_ncols, d_zero, d_zero, rA, ld_rA);
         char chup = 'U';
-        dlacpy_(&chup, &CUV_ncols, &CUV_ncols,
-                        _CU, &ld_CU,
-                        rA, &ld_rA);
+        LAPACKE_dlacpy(LAPACK_COL_MAJOR, chup, CUV_ncols, CUV_ncols,
+                        _CU, ld_CU,
+                        rA, ld_rA);
 
         // rA = rA * rB^T
         cblas_dtrmm(CblasColMajor, CblasRight, CblasUpper, CblasTrans, CblasNonUnit,
@@ -356,7 +356,7 @@ void HCORE_dgemm_fast(HCORE_enum transA, int transB,
             char uplo = 'A';
             int nrows = _M - CUV_ncols;
             int ncols = finalrank;
-            dlaset_( &uplo, &nrows, &ncols, &d_zero, &d_zero, &(TU[CUV_ncols]), &ld_TU );
+            LAPACKE_dlaset(LAPACK_COL_MAJOR, uplo, nrows, ncols, d_zero, d_zero, &(TU[CUV_ncols]), ld_TU);
 
             info = LAPACKE_dormqr(  LAPACK_COL_MAJOR,
                                     'L', 'N',
@@ -400,7 +400,7 @@ void HCORE_dgemm_fast(HCORE_enum transA, int transB,
                 nrows = finalrank;
                 ncols = _M - CUV_ncols;
             #endif
-            dlaset_( &uplo, &nrows, &ncols, &d_zero, &d_zero, &(TV[TV_pad]), &ld_TV );
+            LAPACKE_dlaset(LAPACK_COL_MAJOR, uplo, nrows, ncols, d_zero, d_zero, &(TV[TV_pad]), ld_TV);
 
             info = LAPACKE_dormqr(  LAPACK_COL_MAJOR,
                                     #ifdef HCORE_GEMM_USE_KBLAS_ACA

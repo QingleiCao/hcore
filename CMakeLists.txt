@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.2.3)
+cmake_minimum_required(VERSION 3.5)
 project( HCORE C )
 
 set(HCORE_VERSION_MAJOR 0)
@@ -7,10 +7,10 @@ set(HCORE_VERSION_PATCH 0)
 set(HCORE_VERSION "${HCORE_VERSION_MAJOR}.${HCORE_VERSION_MINOR}.${HCORE_VERSION_PATCH}")
 
 
-if(NOT EXISTS "${PROJECT_SOURCE_DIR}/cmake_modules/ecrc/modules" )
+if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/ecrc/modules" )
     find_package(Git REQUIRED)
-    execute_process(COMMAND ${GIT_EXECUTABLE} submodule init WORKING_DIRECTORY ${PROJECT_SOURCE_DIR} RESULT_VARIABLE _res_init OUTPUT_QUIET ERROR_QUIET)
-    execute_process(COMMAND ${GIT_EXECUTABLE} submodule update WORKING_DIRECTORY ${PROJECT_SOURCE_DIR} RESULT_VARIABLE _res_update OUTPUT_QUIET ERROR_QUIET)
+    execute_process(COMMAND ${GIT_EXECUTABLE} submodule init WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} RESULT_VARIABLE _res_init OUTPUT_QUIET ERROR_QUIET)
+    execute_process(COMMAND ${GIT_EXECUTABLE} submodule update WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} RESULT_VARIABLE _res_update OUTPUT_QUIET ERROR_QUIET)
     if( ${_res_init} GREATER 0 OR ${_res_update} GREATER 0 )
         message(FATAL_ERROR "ECRC CMake modules were not found.\n"
                             "We tried: 'git submodule init && git submodule update' and resulted in error" )
@@ -19,9 +19,9 @@ endif()
 
 
 ## ECRC INITIALIZATION
-list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake_modules)
-list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake_modules/ecrc/modules")
-set(ECRC_CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake_modules/ecrc/modules )
+list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules)
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/ecrc/modules")
+set(ECRC_CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/ecrc/modules )
 include(EcrcInit)
 
 
@@ -99,7 +99,9 @@ string(REPLACE ";" " " CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS}")
 # let the comment in case we meet some problems of non existing lapacke
 # functions in lapack library such as mkl, acml, ...
 #set(LAPACKE_STANDALONE TRUE)
-find_package(LAPACKE COMPONENTS LAPACKEXT)
+# Use ECRC FindLAPACKE.cmake directly to avoid conflicts with DPLASMA
+include("${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/ecrc/modules/find/FindLAPACKE.cmake")
+# The include above already handles LAPACKE with LAPACKEXT component
 if(LAPACK_FOUND AND LAPACK_LIBRARY_DIRS)
     # the RPATH to be used when installing
     list(APPEND CMAKE_INSTALL_RPATH "${LAPACK_LIBRARY_DIRS}")
@@ -150,7 +152,7 @@ endif()
 add_subdirectory( src )
 
 # Tests
-option( HCORE_TESTING "Enable testing code" ON )
+option( HCORE_TESTING "Enable testing code" OFF )
 if( HCORE_TESTING )
     message(STATUS "HCORE testing is enabled")
     enable_testing()
@@ -160,8 +162,16 @@ endif()
 
 
 ## Generate pkg-config file
-include(GenPkgConfig)
-generate_pkgconfig_file()
+# Create HCORE pkg-config file
+set(HCORE_PKGCONFIG_LIBS "-lhcore")
+set(HCORE_PKGCONFIG_REQUIRED "")
+
+# Create .pc file
+set(_output_hcore_file "${CMAKE_BINARY_DIR}/hcore.pc")
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/hcore.pc.in" "${_output_hcore_file}" @ONLY)
+
+# Installation
+install(FILES ${_output_hcore_file} DESTINATION lib/pkgconfig)
 
 
 ###############################################################################
