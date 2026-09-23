@@ -19,6 +19,7 @@
 #endif
 
 #include "hcore_d.h"
+#include <stddef.h>
 
 #undef CBLAS_SADDR
 #define CBLAS_SADDR(_val) (_val)
